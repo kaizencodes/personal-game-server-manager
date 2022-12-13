@@ -32,17 +32,11 @@ def lambda_handler(event, context): #standard function called on lambda invocati
     if event['command'] == "start":
         try:
             ec2.start_instances(InstanceIds=mcInstanceIds)
-            statusmessage = "If this message appears, something has gone very wrong"
+            statusmessage = "Started Servers and updated DNS successfully"
         except:
             print("start failed")
             statusmessage = "Couldn't start servers, please try again later"
             return(statusmessage,mcInfo)
-        try:
-            statemachineresponse = updateDnsStateFunc(mcInfo)
-            print(statemachineresponse)
-            statusmessage = "Started Servers and updated DNS successfully"
-        except:
-            statusmessage = "Servers started, but DNS update failed - please wait a few minutes and try again or check your hosted zone is setup correctly"
     elif event['command'] == "stop":
         try:
             ec2.stop_instances(InstanceIds=mcInstanceIds)
@@ -86,35 +80,6 @@ def getInfo(mcTagKey, mcTagValue):
                 mcInfoDict['InstanceId'] = instance['InstanceId']
                 mcInfoDict['InstanceType'] = instance['InstanceType']
                 mcInfoDict['State'] = instance['State'].get('Name')
-                for i in instance['Tags']:
-                    if(i.get('Key') == 'domain'):
-                        mcInfoDict['DomainName'] = i.get('Value','No domain value found')
-                        break
-                    else:
-                        mcInfoDict['DomainName'] = 'No domain tag found' 
-                for i in instance['Tags']:
-                    if(i.get('Key') == 'hostedZoneId'):
-                        mcInfoDict['hostedZoneId'] = i.get('Value','No hosted zone value found')
-                        break
-                    else:
-                        mcInfoDict["hostedZoneId"] = 'No hosted zone tag found'
                 mcInfoDict['PublicIpAddress'] = instance.get('PublicIpAddress','No public IP address')
                 mcInfo["Instances"].append(mcInfoDict)
     return(mcInfo)
-    
-def updateDnsStateFunc(mcInfo):
-    stepfunction = boto3.client('stepfunctions')
-    consolidatedsmresponse = []
-    for i in mcInfo['Instances']:
-        hzi = i.get('hostedZoneId')
-        dn = i.get('DomainName')
-        inid = i.get('InstanceId')
-        if dn != 'No domain tag found':
-            response = stepfunction.start_execution(
-                stateMachineArn=os.environ['stepfunctionarn'],
-                input = "{\"hostedZoneId\": \""+hzi+"\",\"domainName\": \""+dn+"\",\"instanceId\": \""+inid+"\"}"
-            )
-            consolidatedsmresponse.append(response)
-        else:
-            consolidatedsmresponse.append("DNS update skipped for "+inid+" because no domain name found")
-    return(consolidatedsmresponse)

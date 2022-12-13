@@ -38,10 +38,10 @@ services:
       - 2458:2458/udp
     environment:
       - PORT=2456
-      - NAME="MyAWSGamingServer"
+      - NAME="KartonfalviVikingek"
       - WORLD="Dedicated"
       - PASSWORD='"$VHPW"'
-      - TZ=Europe/London
+      - TZ=Europe/Budapest
       - PUBLIC=1
       - AUTO_UPDATE=1
       - AUTO_UPDATE_SCHEDULE="0 1 * * *"
